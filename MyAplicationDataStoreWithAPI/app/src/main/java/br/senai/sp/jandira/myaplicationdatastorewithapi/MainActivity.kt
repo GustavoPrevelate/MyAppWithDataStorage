@@ -4,49 +4,34 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.datastore.preferences.core.Preferences
+import androidx.lifecycle.viewmodel.compose.viewModel
 import br.senai.sp.jandira.myaplicationdatastorewithapi.ui.theme.MyAplicationDataStoreWithAPITheme
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MyAplicationDataStoreWithAPITheme {
-                // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    Greeting("Android")
+                    UserDataScreen()
                 }
             }
         }
@@ -55,7 +40,10 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
+fun UserDataScreen() {
+    val viewModel: UserDataViewModel = viewModel()
+    val dataState by remember { viewModel.dataState }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -67,77 +55,87 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
                     )
                 )
             )
-            .verticalScroll(rememberScrollState())
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize(),
+                .fillMaxSize()
+                .padding(30.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = 190.dp)
-                    .background(
-                        brush = Brush.horizontalGradient(
-                            listOf(
-                                Color.Black,
-                                Color.Black
-                            )
-                        ),
-                        shape = RoundedCornerShape(50.dp, 50.dp, 0.dp, 0.dp)
-                    )
-            ) {
+            val name by dataState.name.collectAsState()
+            val lastName by dataState.lastName.collectAsState()
+            val age by dataState.age.collectAsState()
+            val gender by dataState.gender.collectAsState()
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 30.dp),
-                ) {
+            UserDataEntry("Name", name) { viewModel.onNameChange(it) }
+            UserDataEntry("Last Name", lastName) { viewModel.onLastNameChange(it) }
+            UserDataEntry("Age", age) { viewModel.onAgeChange(it) }
+            UserDataEntry("Gender", gender) { viewModel.onGenderChange(it) }
 
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
+            Spacer(modifier = Modifier.height(16.dp))
 
-//                        OutlinedTextField(
-//                            value = userNameUserSharedState,
-//                            onValueChange = { newUserNameJogador ->
-//                                userNameUserSharedState = newUserNameJogador
-//                            },
-//                            modifier = Modifier
-//
-//                                .width(350.dp),
-//                            shape = RoundedCornerShape(16.dp),
-//                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-//                            label = {
-//                                Text(
-//                                    text = "Label User",
-//                                    color = Color.White,
-//                                    fontWeight = FontWeight(600),
-//                                )
-//                            },
-//                            colors = TextFieldDefaults.outlinedTextFieldColors(
-//                                unfocusedBorderColor = Color(255, 255, 255, 255),
-//                                focusedBorderColor = Color(255, 255, 255, 255),
-//                                cursorColor = Color.White
-//                            ),
-//                            textStyle = TextStyle(color = Color.White)
-//                        )
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                    }
-                }
+            Button(onClick = {
+                viewModel.saveUserData()
+            }) {
+                Text(text = "Save")
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(text = "Saved Data:")
+            Text(text = "Name: $name")
+            Text(text = "Last Name: $lastName")
+            Text(text = "Age: $age")
+            Text(text = "Gender: $gender")
         }
     }
 }
 
-@Preview(showBackground = true)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GreetingPreview() {
-    MyAplicationDataStoreWithAPITheme {
-        Greeting("Android")
+fun UserDataEntry(label: String, value: String, onValueChange: (String) -> Unit) {
+    Column {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Text),
+            label = { Text(text = label) },
+    }
+    Spacer(modifier = Modifier.height(10.dp))
+}
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun UserDataScreen() {
+    // ... código anterior
+
+    val viewModel: UserDataViewModel = viewModel()
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                brush = Brush.horizontalGradient(
+                    listOf(
+                        Color.Black,
+                        Color.Black
+                    )
+                ),
+                shape = RoundedCornerShape(50.dp, 50.dp, 0.dp, 0.dp)
+            )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 30.dp),
+        ) {
+            UserDataEntry("Name", viewModel.name) { viewModel.name = it }
+            UserDataEntry("Last Name", viewModel.lastName) { viewModel.lastName = it }
+            UserDataEntry("Age", viewModel.age) { viewModel.age = it }
+            UserDataEntry("Gender", viewModel.gender) { viewModel.gender = it }
+        }
     }
 }
